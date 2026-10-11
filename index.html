@@ -123,6 +123,17 @@
   .sec .c{font-family:var(--font-mono);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
   .sec.up .c{color:var(--up)} .sec.down .c{color:var(--down)}
 
+  /* global cues grid */
+  .mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .mitem{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:10px 12px;min-width:0}
+  .mitem.up{background:var(--up-bg);border-color:transparent}
+  .mitem.down{background:var(--down-bg);border-color:transparent}
+  .mitem .mn{font-size:11.5px;font-weight:600;color:var(--muted)}
+  .mitem .mv2{font-family:var(--font-mono);font-weight:600;font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .mitem .mu{font-size:10px;color:var(--muted);margin-left:4px;font-weight:500}
+  .mitem .mp{font-family:var(--font-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+  .mitem.up .mp{color:var(--up)} .mitem.down .mp{color:var(--down)}
+
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:3px;min-width:0}
   .tile .l{font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
@@ -390,13 +401,27 @@
       h.push('</div><p class="note-line">Tap a sector to see its member companies.</p></section>');
     }
 
-    // commodities
+    // commodities (in rupees)
     if(d.commodities&&d.commodities.length){
-      h.push('<section><h2>Commodities</h2><div class="pair">');
+      h.push('<section><h2>Commodities <span class="q">₹</span></h2><div class="pair">');
       d.commodities.forEach(function(c){
-        h.push('<div class="tile"><span class="l">'+esc(c.name)+'</span><span class="v '+(c.pct>=0?"cu":"cd")+'">'+signPct(c.pct)+'</span><span class="s">'+num(c.close)+' · '+esc(c.sub)+'</span></div>');
+        h.push('<div class="tile"><span class="l">'+esc(c.name)+'</span>'
+          +'<span class="v">₹'+num(c.close,0)+'</span>'
+          +'<span class="s">'+esc(c.unit||"")+' · <span class="'+(c.pct>=0?"cu":"cd")+'">'+signPct(c.pct)+'</span> · '+esc(c.sub||"")+'</span></div>');
       });
       h.push('</div></section>');
+    }
+
+    // global cues
+    if(d.macro&&d.macro.length){
+      h.push('<section><h2>Global Cues <span class="q">prior close</span></h2><div class="mg">');
+      d.macro.forEach(function(m){
+        var dec = (m.unit==='₹/$'||m.unit==='%'||m.unit==='$/bbl')?2:0;
+        h.push('<div class="mitem '+cls(m.pct)+'"><span class="mn">'+esc(m.name)+'</span>'
+          +'<span class="mv2">'+num(m.close,dec)+'<span class="mu">'+esc(m.unit)+'</span></span>'
+          +'<span class="mp">'+signPct(m.pct)+'</span></div>');
+      });
+      h.push('</div><p class="note-line">US &amp; Asia benchmarks, crude, the rupee and the US 10-year — the cues that set the tone for India’s open.</p></section>');
     }
 
     // movers

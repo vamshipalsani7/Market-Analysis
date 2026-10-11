@@ -476,16 +476,57 @@ def build_brief(date_str):
     if nse.get("fii_dii"):
         out["fii_dii"] = nse["fii_dii"]
 
-    # ---- Commodities (Yahoo) ----
+    # ---- Commodities in INR: gold (₹/10g) and silver (₹/kg) ----
+    # Computed from international spot (COMEX) converted at the day's USD/INR.
     commodities = []
-    for name, tkr, sub in COMMODITIES:
-        try:
-            q = _quote(yf, name, tkr, target)
-            if q and q.get("pct") is not None:
-                commodities.append({"name": name, "sub": sub, "close": q["close"], "pct": q["pct"]})
-        except Exception as e:
-            notes.append(f"Commodity {name}: {e}")
+    OZ = 31.1034768  # grams per troy ounce
+    try:
+        fx = _quote(yf, "USDINR", "INR=X", target)
+        gold = _quote(yf, "Gold", "GC=F", target)
+        silver = _quote(yf, "Silver", "SI=F", target)
+        if fx and gold:
+            now = gold["close"] / OZ * 10 * fx["close"]
+            pct = gold.get("pct")
+            if gold.get("prev") and fx.get("prev"):
+                prev = gold["prev"] / OZ * 10 * fx["prev"]
+                pct = (now - prev) / prev * 100 if prev else pct
+            commodities.append({"name": "Gold", "close": now, "pct": pct,
+                                "unit": "₹ / 10g", "sub": "24K · intl spot"})
+        if fx and silver:
+            now = silver["close"] / OZ * 1000 * fx["close"]
+            pct = silver.get("pct")
+            if silver.get("prev") and fx.get("prev"):
+                prev = silver["prev"] / OZ * 1000 * fx["prev"]
+                pct = (now - prev) / prev * 100 if prev else pct
+            commodities.append({"name": "Silver", "close": now, "pct": pct,
+                                "unit": "₹ / kg", "sub": "intl spot"})
+    except Exception as e:
+        notes.append(f"Commodities: {e}")
     out["commodities"] = commodities
+
+    # ---- Global cues (US & Asia benchmarks, crude, rupee, US 10Y) ----
+    macro = []
+    MACRO = [
+        ("USD / INR",   "INR=X", "₹/$",   "fx"),
+        ("Brent Crude", "BZ=F",  "$/bbl", "usd"),
+        ("US 10Y",      "^TNX",  "%",     "yield"),
+        ("Dow Jones",   "^DJI",  "pts",   "idx"),
+        ("S&P 500",     "^GSPC", "pts",   "idx"),
+        ("Nasdaq",      "^IXIC", "pts",   "idx"),
+        ("Nikkei 225",  "^N225", "pts",   "idx"),
+        ("Hang Seng",   "^HSI",  "pts",   "idx"),
+    ]
+    for nm, tkr, unit, kind in MACRO:
+        try:
+            q = _quote(yf, nm, tkr, target)
+            if q and q.get("close") is not None:
+                val = q["close"]
+                if kind == "yield" and val > 20:   # ^TNX is sometimes quoted as yield x10
+                    val = val / 10.0
+                macro.append({"name": nm, "close": val, "pct": q.get("pct"), "unit": unit})
+        except Exception as e:
+            notes.append(f"Macro {nm}: {e}")
+    out["macro"] = macro
 
     # ---- Technicals (pivots) from Yahoo OHLC ----
     techs = []
