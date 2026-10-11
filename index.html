@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>India Market Pulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --surface-2:#f0f2f5;
+    --fg:#161a20; --muted:#606a78; --border:#e4e8ee;
+    --accent:#2f5fd0;
+    --up:#0b8f4e; --up-bg:#e8f6ee;
+    --down:#d1392e; --down-bg:#fdeceb;
+    --flat:#7a8492; --flat-bg:#eef1f5;
+    --font-display:'Archivo',system-ui,sans-serif;
+    --font-body:'IBM Plex Sans',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --radius:13px;
+    color-scheme:light;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1116; --surface:#161b22; --surface-2:#1c222b;
+    --fg:#e8ebf0; --muted:#99a3b1; --border:#262d38;
+    --accent:#7aa2ff;
+    --up:#34cf82; --up-bg:#113124;
+    --down:#ff6d62; --down-bg:#391a18;
+    --flat:#8a94a2; --flat-bg:#1c222b;
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0e1116; --surface:#161b22; --surface-2:#1c222b;
+    --fg:#e8ebf0; --muted:#99a3b1; --border:#262d38;
+    --accent:#7aa2ff;
+    --up:#34cf82; --up-bg:#113124;
+    --down:#ff6d62; --down-bg:#391a18;
+    --flat:#8a94a2; --flat-bg:#1c222b;
+    color-scheme:dark;
+  }}
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+
+  /* ---- control bar ---- */
+  .top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);margin-inline:-16px;padding:14px 16px 13px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .dot{width:11px;height:11px;border-radius:50%;background:var(--up);box-shadow:0 0 0 4px var(--up-bg);flex-shrink:0}
+  .brand h1{font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.01em;margin:0}
+  .brand .sub{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .brand .spacer{flex:1}
+  .icon-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:9px;width:34px;height:34px;font-size:15px;cursor:pointer;display:grid;place-items:center;transition:.12s}
+  .icon-btn:hover{color:var(--fg);border-color:var(--accent)}
+  .controls{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-left:2px}
+  input[type=date]{font-family:var(--font-mono);font-size:14px;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:9px;padding:8px 11px;min-width:150px}
+  input[type=date]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .gen{align-self:flex-end;background:var(--accent);color:#fff;border:0;border-radius:9px;padding:9px 18px;font-family:var(--font-body);font-weight:600;font-size:14px;cursor:pointer;transition:.12s;display:flex;align-items:center;gap:8px;min-height:38px}
+  .gen:hover{filter:brightness(1.07)}
+  .gen:disabled{opacity:.6;cursor:default}
+  .quick{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .chip{font-family:var(--font-mono);font-size:11px;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:3px 11px;cursor:pointer;transition:.12s}
+  .chip:hover{color:var(--accent);border-color:var(--accent)}
+
+  .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ---- states ---- */
+  #status{margin-top:22px}
+  .placeholder{text-align:center;color:var(--muted);padding:48px 16px}
+  .placeholder .big{font-size:40px;margin-bottom:10px}
+  .placeholder p{font-size:14px;max-width:360px;margin:6px auto 0}
+  .err{background:var(--down-bg);border:1px solid var(--down);border-radius:11px;padding:14px 16px;color:var(--fg);font-size:13.5px}
+  .err b{color:var(--down)}
+
+  /* ---- result ---- */
+  #out{margin-top:20px;display:none}
+  #out.show{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .verdict{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:6px}
+  .verdict .d{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-bottom:4px}
+  .verdict .v{font-size:15.5px;font-weight:600}
+
+  section{margin-top:24px}
+  h2{font-family:var(--font-display);font-weight:700;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 11px;display:flex;align-items:center;gap:8px}
+  h2 .q{font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:none;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:1px 6px;flex-shrink:0}
+  h2::after{content:"";flex:1;height:1px;background:var(--border)}
+  .note-line{font-size:12px;color:var(--muted);margin:9px 0 0;line-height:1.45}
+
+  .idx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px}
+  .idx{display:flex;flex-direction:column;gap:3px;text-decoration:none;color:var(--fg);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 13px;transition:transform .12s,box-shadow .12s}
+  .idx:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(0,0,0,.09)}
+  .idx.up{background:var(--up-bg);border-color:transparent}
+  .idx.down{background:var(--down-bg);border-color:transparent}
+  .idx .nm{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .idx .nm .go{opacity:.5;font-size:12px}
+  .idx .val{font-family:var(--font-mono);font-weight:600;font-size:19px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .idx .chg{font-family:var(--font-mono);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+  .up .chg,.cu{color:var(--up)} .down .chg,.cd{color:var(--down)} .cf{color:var(--flat)}
+
+  .breadth{margin-top:10px;display:flex;align-items:center;gap:11px;font-family:var(--font-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 13px}
+  .breadth b{color:var(--fg)}
+  .bar{flex:1;height:6px;border-radius:3px;overflow:hidden;display:flex;min-width:60px;background:var(--flat-bg)}
+  .bar .a{background:var(--up)} .bar .d{background:var(--down)}
+
+  .tech{display:flex;flex-direction:column;gap:10px}
+  .trow{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+  .trow .lbl{font-size:12.5px;font-weight:600;margin-bottom:8px}
+  .pills{display:flex;gap:7px;flex-wrap:wrap}
+  .pill{font-family:var(--font-mono);font-size:11.5px;font-weight:600;border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums}
+  .pill.r{background:var(--down-bg);color:var(--down)} .pill.s{background:var(--up-bg);color:var(--up)} .pill.p{background:var(--surface-2);color:var(--muted)}
+
+  .sec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:7px}
+  .sec{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 10px}
+  .sec.up{background:var(--up-bg);border-color:transparent} .sec.down{background:var(--down-bg);border-color:transparent}
+  .sec .n{font-size:11.5px;font-weight:600;color:var(--muted)}
+  .sec .c{font-family:var(--font-mono);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  .sec.up .c{color:var(--up)} .sec.down .c{color:var(--down)}
+
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:3px;min-width:0}
+  .tile .l{font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+  .tile .v{font-family:var(--font-mono);font-weight:600;font-size:17px;font-variant-numeric:tabular-nums}
+  .tile .s{font-size:11px;color:var(--muted)}
+
+  .movers{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .mv{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;min-width:0}
+  .mv h3{margin:0 0 9px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .mv.g h3{color:var(--up)} .mv.l h3{color:var(--down)}
+  .mv ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+  .mv li{font-size:13px;font-weight:500;display:flex;justify-content:space-between;gap:8px}
+  .mv li .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mv li .pc{font-family:var(--font-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+  .mv.g .pc{color:var(--up)} .mv.l .pc{color:var(--down)}
+
+  .offline{background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;padding:13px 15px;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .offline b{color:var(--fg)}
+
+  .notes{margin-top:18px;font-size:11px;color:var(--muted);line-height:1.5}
+  .notes summary{cursor:pointer;font-family:var(--font-mono);letter-spacing:.04em}
+  .notes ul{margin:7px 0 0;padding-left:18px}
+
+  footer{margin-top:30px;padding-top:15px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);line-height:1.55}
+  footer b{color:var(--fg)}
+
+  @media (max-width:430px){.pair,.movers{grid-template-columns:1fr}.brand h1{font-size:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">
+      <span class="dot"></span>
+      <div>
+        <h1>India Market Pulse</h1>
+        <div class="sub">NSE · BSE — daily close</div>
+      </div>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="theme" title="Toggle theme">◐</button>
+    </div>
+    <div class="controls">
+      <div class="field">
+        <label for="date">Trading date</label>
+        <input type="date" id="date">
+      </div>
+      <button class="gen" id="gen">Generate</button>
+    </div>
+    <div class="quick">
+      <span class="chip" data-q="last">Last session</span>
+      <span class="chip" data-q="1">Yesterday</span>
+      <span class="chip" data-q="7">1 week ago</span>
+    </div>
+  </div>
+
+  <div id="status">
+    <div class="placeholder">
+      <div class="big">📈</div>
+      <p>Pick a trading date and hit <b>Generate</b> to pull that day's market summary — indices, sectors, commodities, movers and key levels.</p>
+    </div>
+  </div>
+
+  <div id="out"></div>
+
+  <footer>
+    <b>India Market Pulse</b> — a local, free tool. Numbers are end-of-day data from Yahoo Finance; nothing is sent anywhere except to fetch quotes. Figures are provisional and for information only, not investment advice.<br><br>
+    Your <b>7 PM phone brief</b> still runs automatically every market day with the full AI write-up (news, FII/DII, takeaways) — this tool is the on-demand, numbers-first companion.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){return document.querySelector(s)};
+
+  // ---- theme ----
+  try{var t=localStorage.getItem("imp-theme"); if(t) document.documentElement.setAttribute("data-theme",t);}catch(e){}
+  $("#theme").addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var dark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme:dark)").matches;
+    var next = dark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try{localStorage.setItem("imp-theme", next);}catch(e){}
+  });
+
+  // ---- default date = most recent weekday ----
+  function isoLocal(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function lastSession(){var d=new Date(); var g=d.getDay(); if(g===0)d.setDate(d.getDate()-2); else if(g===6)d.setDate(d.getDate()-1); return d;}
+  var dateEl=$("#date");
+  dateEl.max=isoLocal(new Date());
+  dateEl.value=isoLocal(lastSession());
+
+  $(".quick").addEventListener("click",function(e){
+    var c=e.target.closest(".chip"); if(!c)return;
+    var q=c.getAttribute("data-q"); var d;
+    if(q==="last"){d=lastSession();}
+    else{d=new Date(); d.setDate(d.getDate()-parseInt(q,10));}
+    dateEl.value=isoLocal(d); run();
+  });
+
+  var num=function(n,dec){dec=dec==null?2:dec; return (n==null||isNaN(n))?"—":Number(n).toLocaleString("en-IN",{minimumFractionDigits:dec,maximumFractionDigits:dec});};
+  var signPct=function(p){if(p==null||isNaN(p))return "—"; return (p>=0?"▲ +":"▼ ")+Math.abs(p).toFixed(2)+"%";};
+  var cls=function(p){return p==null?"flat":(p>0?"up":(p<0?"down":"flat"));};
+  var esc=function(s){return String(s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});};
+
+  function run(){
+    var date=dateEl.value; if(!date)return;
+    var btn=$("#gen"); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Fetching…';
+    $("#out").classList.remove("show");
+    $("#status").innerHTML='<div class="placeholder"><div class="big">⏳</div><p>Pulling market data for '+esc(date)+'… first run of the day can take ~15–30s.</p></div>';
+    fetch("/api/brief?date="+encodeURIComponent(date))
+      .then(function(r){return r.json();})
+      .then(function(d){ btn.disabled=false; btn.textContent="Generate"; render(d); })
+      .catch(function(err){
+        btn.disabled=false; btn.textContent="Generate";
+        $("#status").innerHTML='<div class="err"><b>Couldn\'t reach the data engine.</b><br>Make sure the tool window (run.bat) is still open, then try again.<br><span style="opacity:.7">'+esc(err.message||err)+'</span></div>';
+      });
+  }
+
+  function render(d){
+    if(d.fatal||d.error){
+      $("#status").innerHTML='<div class="err"><b>Something went wrong.</b><br>'+esc(d.error||"Unknown error")+'</div>';
+      $("#out").classList.remove("show"); return;
+    }
+    if((!d.indices||!d.indices.length)){
+      $("#status").innerHTML='<div class="err"><b>No market data for '+esc(d.date)+'.</b><br>'+(d.weekend?"That date is a weekend — markets were closed. ":"The market may have been a holiday, or data isn\'t available yet for a very recent date. ")+'Try the <b>Last session</b> chip.</div>';
+      $("#out").classList.remove("show"); return;
+    }
+    $("#status").innerHTML="";
+    var h=[];
+
+    var shown = d.actual_date && d.actual_date!==d.date;
+    h.push('<div class="verdict"><div class="d">'+esc(d.actual_date||d.date)+(shown?' · nearest trading day to '+esc(d.date):'')+'</div><div class="v">'+esc(d.verdict||"")+'</div></div>');
+
+    // indices
+    h.push('<section><h2>Indices</h2><p class="note-line" style="margin-top:-4px;margin-bottom:11px">Tap a card to open its live chart ↗</p><div class="idx-grid">');
+    d.indices.forEach(function(i){
+      var c=cls(i.pct);
+      h.push('<a class="idx '+c+'" href="'+(i.link||"#")+'" target="_blank" rel="noopener">'
+        +'<span class="nm">'+esc(i.name)+' <span class="go">↗</span></span>'
+        +'<span class="val">'+num(i.close)+'</span>'
+        +'<span class="chg">'+(i.change!=null?(i.change>=0?"+":"")+num(i.change):"")+' · '+signPct(i.pct)+'</span></a>');
+    });
+    h.push('</div>');
+    if(d.breadth){
+      var tot=d.breadth.adv+d.breadth.dec||1;
+      h.push('<div class="breadth"><span>'+esc(d.breadth.universe)+' breadth</span>'
+        +'<span class="bar"><span class="a" style="width:'+(d.breadth.adv/tot*100)+'%"></span><span class="d" style="width:'+(d.breadth.dec/tot*100)+'%"></span></span>'
+        +'<span><b class="cu">'+d.breadth.adv+'</b> adv · <b class="cd">'+d.breadth.dec+'</b> dec</span></div>');
+    }
+    h.push('</section>');
+
+    // technicals
+    if(d.technicals&&d.technicals.length){
+      h.push('<section><h2>Key Levels <span class="q">pivots · next session</span></h2><div class="tech">');
+      d.technicals.forEach(function(t){
+        h.push('<div class="trow"><div class="lbl">'+esc(t.name)+'</div><div class="pills">'
+          +'<span class="pill r">R2 '+num(t.r2,0)+'</span><span class="pill r">R1 '+num(t.r1,0)+'</span>'
+          +'<span class="pill p">PP '+num(t.pp,0)+'</span>'
+          +'<span class="pill s">S1 '+num(t.s1,0)+'</span><span class="pill s">S2 '+num(t.s2,0)+'</span></div></div>');
+      });
+      h.push('</div><p class="note-line">Classic floor-trader pivots from the day\'s high/low/close — a guide to next-session support &amp; resistance.</p></section>');
+    }
+
+    // sectors
+    if(d.sectors&&d.sectors.length){
+      h.push('<section><h2>Sectors <span class="q">NSE</span></h2><div class="sec-grid">');
+      d.sectors.forEach(function(s){
+        h.push('<div class="sec '+cls(s.pct)+'"><span class="n">'+esc(s.name)+'</span><span class="c">'+signPct(s.pct)+'</span></div>');
+      });
+      h.push('</div></section>');
+    }
+
+    // commodities
+    if(d.commodities&&d.commodities.length){
+      h.push('<section><h2>Commodities</h2><div class="pair">');
+      d.commodities.forEach(function(c){
+        h.push('<div class="tile"><span class="l">'+esc(c.name)+'</span><span class="v '+(c.pct>=0?"cu":"cd")+'">'+signPct(c.pct)+'</span><span class="s">'+num(c.close)+' · '+esc(c.sub)+'</span></div>');
+      });
+      h.push('</div></section>');
+    }
+
+    // movers
+    if(d.gainers&&d.gainers.length){
+      h.push('<section><h2>Top Movers <span class="q">Nifty 50</span></h2><div class="movers">');
+      h.push('<div class="mv g"><h3>▲ Gainers</h3><ul>');
+      d.gainers.forEach(function(m){h.push('<li><span class="nm">'+esc(m.name)+'</span><span class="pc">+'+m.pct.toFixed(2)+'%</span></li>');});
+      h.push('</ul></div><div class="mv l"><h3>▼ Losers</h3><ul>');
+      d.losers.forEach(function(m){h.push('<li><span class="nm">'+esc(m.name)+'</span><span class="pc">'+m.pct.toFixed(2)+'%</span></li>');});
+      h.push('</ul></div></div></section>');
+    }
+
+    // offline note for AI-only sections
+    h.push('<section><h2>News · FII/DII · Takeaways</h2><div class="offline">These AI-written sections aren\'t part of the free offline tool. Your <b>7 PM phone brief</b> delivers them automatically every market day — market-moving news with links, FII/DII flows, results, IPOs and the analyst-style takeaways.</div></section>');
+
+    // notes
+    if(d.notes&&d.notes.length){
+      h.push('<details class="notes"><summary>Data notes ('+d.notes.length+')</summary><ul>');
+      d.notes.forEach(function(n){h.push('<li>'+esc(n)+'</li>');});
+      h.push('</ul></details>');
+    }
+
+    var out=$("#out"); out.innerHTML=h.join(""); out.classList.add("show");
+  }
+
+  $("#gen").addEventListener("click", run);
+  dateEl.addEventListener("keydown", function(e){if(e.key==="Enter")run();});
+})();
+</script>
+</body>
+</html>
