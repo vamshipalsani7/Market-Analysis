@@ -5,12 +5,25 @@ trading day. Double-click, pick a date, click **Generate** — you get indices,
 sector performance, commodities, top movers, market breadth and key support/
 resistance levels in a clean dashboard.
 
-No account, no API key, no cost. Market data comes from Yahoo Finance via the
-`yfinance` library. Nothing leaves your PC except the requests that fetch quotes.
+No account, no API key, no cost. Nothing leaves your PC except the requests that
+fetch this public data.
 
-> This is the on-demand, numbers-first companion to the automated **7 PM phone
-> brief**, which adds the AI write-up (market-moving news, FII/DII flows, results,
-> IPOs and takeaways). Those AI sections are not part of this offline tool.
+**Data sources**
+- **NSE India** (official JSON) — live indices, all sectoral indices, market
+  breadth, and FII/DII cash activity, for the latest session.
+- **Financial-press RSS** (Economic Times, Moneycontrol, Business Standard,
+  Livemint) — the day's market news with working links.
+- **Yahoo Finance** (`yfinance`) — index/sector/commodity data and top movers for
+  any historical date, pivot levels, and a fallback whenever NSE is unreachable.
+
+> Note on Groww / Zerodha / Screener: these don't publish open daily-market APIs,
+> and scraping a broker's logged-in pages is fragile and against their terms. NSE
+> (official) plus the news feeds cover everything needed for a daily market view;
+> Screener is per-company fundamentals, not daily market data.
+
+> The only thing this tool doesn't reproduce from the **7 PM phone brief** is the
+> AI-written cause-and-effect *takeaways*. Everything else — numbers, flows, news
+> — is here, on demand, for whatever date you pick.
 
 ---
 
