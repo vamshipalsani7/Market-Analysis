@@ -123,7 +123,7 @@ SENSEX_30 = {
     "ADANIPORTS","ASIANPAINT","AXISBANK","BAJFINANCE","BAJAJFINSV","BHARTIARTL",
     "HCLTECH","HDFCBANK","HINDUNILVR","ICICIBANK","INFY","ITC","KOTAKBANK","LT",
     "M&M","MARUTI","NTPC","NESTLEIND","POWERGRID","RELIANCE","SBIN","SUNPHARMA",
-    "TCS","TATAMOTORS","TATASTEEL","TECHM","TITAN","TRENT","ULTRACEMCO","ZOMATO",
+    "TCS","TATAMOTORS","TMPV","TATASTEEL","TECHM","TITAN","TRENT","ULTRACEMCO","ETERNAL",
 }
 
 
@@ -302,8 +302,13 @@ def nse_constituents(name):
     s = nse_session()
 
     def fetch(idx):
-        url = "https://www.nseindia.com/api/equity-stockIndices?index=" + quote(idx)
-        return nse_get(s, url).get("data", [])
+        # NSE's current gateway for an index's constituents (the old
+        # /api/equity-stockIndices was retired and now 404s).
+        url = ("https://www.nseindia.com/api/NextApi/apiClient/marketWatchApi"
+               "?functionName=getIndicesData&symbol=" + quote(idx))
+        payload = nse_get(s, url)
+        inner = payload.get("data") or {}
+        return inner.get("data", []) or []
 
     raw = []
     if name == "SENSEX":
@@ -323,14 +328,16 @@ def nse_constituents(name):
     rows = []
     for r in raw:
         sym = r.get("symbol")
-        if not sym or sym.upper() == name.upper():
+        company = r.get("companyName")
+        # the first row is the index itself (no companyName) — skip it
+        if not sym or not company or sym.upper() == name.upper():
             continue
         pch = _f(r.get("pChange"))
         if pch is None:
             continue
         rows.append({
             "symbol": sym,
-            "company": (r.get("meta") or {}).get("companyName") or sym,
+            "company": company,
             "ltp": _f(r.get("lastPrice")),
             "change": _f(r.get("change")),
             "pChange": pch,

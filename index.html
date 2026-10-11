@@ -464,6 +464,7 @@
       });
   }
   function renderRows(){
+    if(!curRows.length) return;   // keep the error/empty message intact
     var q=mfilter.value.trim().toLowerCase();
     var rows=curRows.slice();
     if(sortMode==="name") rows.sort(function(a,b){return a.company.localeCompare(b.company);});
