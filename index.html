@@ -168,7 +168,42 @@
   footer{margin-top:30px;padding-top:15px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);line-height:1.55}
   footer b{color:var(--fg)}
 
+  /* clickable cards + members hint */
+  .idx.clk{cursor:pointer;position:relative}
+  .idx .members{font-family:var(--font-mono);font-size:9px;letter-spacing:.04em;color:var(--accent);text-transform:uppercase;opacity:.85}
+  .chartlink{position:absolute;top:9px;right:10px;z-index:2;color:var(--muted);text-decoration:none;font-size:13px;opacity:.55;line-height:1}
+  .chartlink:hover{color:var(--accent);opacity:1}
+  .sec.clk{cursor:pointer}
+  .sec.clk:hover,.idx.clk:hover{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:-1px}
+  .clk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* modal */
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(10,12,16,.55);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{background:var(--bg);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:540px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 -10px 50px rgba(0,0,0,.35);animation:slideup .22s ease}
+  @keyframes slideup{from{transform:translateY(28px);opacity:.5}to{transform:none;opacity:1}}
+  .mhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:16px 16px 11px}
+  .mt{font-family:var(--font-display);font-weight:700;font-size:18px;letter-spacing:-.01em}
+  .ms{font-size:12px;color:var(--muted);margin-top:4px;font-family:var(--font-mono)}
+  .mtool{display:flex;gap:8px;padding:0 16px 11px;border-bottom:1px solid var(--border)}
+  #mfilter{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:8px 11px;color:var(--fg);font-family:var(--font-body);font-size:13px}
+  #mfilter:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .sortbtn{background:var(--surface);border:1px solid var(--border);border-radius:9px;color:var(--muted);font-family:var(--font-mono);font-size:11px;padding:0 12px;cursor:pointer;white-space:nowrap}
+  .sortbtn:hover{color:var(--accent);border-color:var(--accent)}
+  .mbody{overflow-y:auto;padding:7px 10px 16px}
+  .mload{display:flex;justify-content:center;padding:44px}
+  .spin.dark{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent)}
+  .merr{padding:26px 16px;color:var(--muted);font-size:13px;text-align:center;line-height:1.55}
+  .crow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;text-decoration:none;color:var(--fg)}
+  .crow:hover{background:var(--surface-2)}
+  .cname{display:flex;flex-direction:column;min-width:0}
+  .cname .sym{font-family:var(--font-mono);font-size:12px;font-weight:600}
+  .cname .co{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cnum{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;text-align:right}
+  .cnum .ltp{font-family:var(--font-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .cnum .cp{font-family:var(--font-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+
   @media (max-width:430px){.pair,.movers{grid-template-columns:1fr}.brand h1{font-size:17px}}
+  @media (min-width:560px){.modal{align-items:center;padding:20px}.sheet{border-radius:16px}}
 </style>
 </head>
 <body>
@@ -206,6 +241,20 @@
   </div>
 
   <div id="out"></div>
+
+  <div id="modal" class="modal" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+      <div class="mhead">
+        <div style="min-width:0"><div id="mtitle" class="mt"></div><div id="msub" class="ms"></div></div>
+        <button class="icon-btn" id="mclose" aria-label="Close">✕</button>
+      </div>
+      <div class="mtool">
+        <input id="mfilter" type="text" placeholder="Filter companies…" autocomplete="off">
+        <button class="sortbtn" id="msort">Sort: % change</button>
+      </div>
+      <div id="mbody" class="mbody"></div>
+    </div>
+  </div>
 
   <footer>
     <b>India Market Pulse</b> — a local, free tool. Numbers are end-of-day data from Yahoo Finance; nothing is sent anywhere except to fetch quotes. Figures are provisional and for information only, not investment advice.<br><br>
@@ -280,13 +329,19 @@
     h.push('<div class="verdict"><div class="d">'+esc(d.actual_date||d.date)+(shown?' · nearest trading day to '+esc(d.date):'')+badge+'</div><div class="v">'+esc(d.verdict||"")+'</div></div>');
 
     // indices
-    h.push('<section><h2>Indices</h2><p class="note-line" style="margin-top:-4px;margin-bottom:11px">Tap a card to open its live chart ↗</p><div class="idx-grid">');
+    h.push('<section><h2>Indices</h2><p class="note-line" style="margin-top:-4px;margin-bottom:11px">Tap a card to see the companies inside it; the ↗ opens its chart.</p><div class="idx-grid">');
     d.indices.forEach(function(i){
       var c=cls(i.pct);
-      h.push('<a class="idx '+c+'" href="'+(i.link||"#")+'" target="_blank" rel="noopener">'
-        +'<span class="nm">'+esc(i.name)+' <span class="go">↗</span></span>'
+      var body='<span class="nm">'+esc(i.name)+' '+(i.cindex?'<span class="members">members ›</span>':'<span class="go">↗</span>')+'</span>'
         +'<span class="val">'+num(i.close)+'</span>'
-        +'<span class="chg">'+(i.change!=null?(i.change>=0?"+":"")+num(i.change):"")+' · '+signPct(i.pct)+'</span></a>');
+        +'<span class="chg">'+(i.change!=null?(i.change>=0?"+":"")+num(i.change):"")+' · '+signPct(i.pct)+'</span>';
+      if(i.cindex){
+        h.push('<div class="idx clk '+c+'" role="button" tabindex="0" data-cindex="'+esc(i.cindex)+'" data-name="'+esc(i.name)+'" data-pct="'+(i.pct==null?"":i.pct)+'">'
+          +(i.link?'<a class="chartlink" href="'+i.link+'" target="_blank" rel="noopener" title="Open chart" aria-label="Open chart">↗</a>':'')
+          +body+'</div>');
+      } else {
+        h.push('<a class="idx '+c+'" href="'+(i.link||"#")+'" target="_blank" rel="noopener">'+body+'</a>');
+      }
     });
     h.push('</div>');
     if(d.breadth){
@@ -326,9 +381,10 @@
     if(d.sectors&&d.sectors.length){
       h.push('<section><h2>Sectors <span class="q">NSE</span></h2><div class="sec-grid">');
       d.sectors.forEach(function(s){
-        h.push('<div class="sec '+cls(s.pct)+'"><span class="n">'+esc(s.name)+'</span><span class="c">'+signPct(s.pct)+'</span></div>');
+        var ca = s.cindex ? ' clk" role="button" tabindex="0" data-cindex="'+esc(s.cindex)+'" data-name="'+esc(s.name)+'" data-pct="'+(s.pct==null?"":s.pct)+'"' : '"';
+        h.push('<div class="sec '+cls(s.pct)+ca+'><span class="n">'+esc(s.name)+'</span><span class="c">'+signPct(s.pct)+'</span></div>');
       });
-      h.push('</div></section>');
+      h.push('</div><p class="note-line">Tap a sector to see its member companies.</p></section>');
     }
 
     // commodities
@@ -377,6 +433,77 @@
 
   $("#gen").addEventListener("click", run);
   dateEl.addEventListener("keydown", function(e){if(e.key==="Enter")run();});
+
+  // ---- constituents modal ----
+  var modal=$("#modal"), mtitle=$("#mtitle"), msub=$("#msub"), mbody=$("#mbody"),
+      mfilter=$("#mfilter"), msort=$("#msort");
+  var curRows=[], sortMode="pct";
+
+  function openModal(cindex, name, pct){
+    modal.hidden=false; document.body.style.overflow="hidden";
+    mtitle.textContent=name; msub.textContent="Loading members…";
+    mbody.innerHTML='<div class="mload"><span class="spin dark"></span></div>';
+    mfilter.value=""; curRows=[];
+    fetch("/api/constituents?index="+encodeURIComponent(cindex))
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if((!d.rows||!d.rows.length)){
+          msub.textContent="";
+          mbody.innerHTML='<div class="merr">'+esc(d.error||"No member data returned.")+'<br><span style="opacity:.7">NSE can throttle rapid requests — wait a few seconds and reopen.</span></div>';
+          return;
+        }
+        curRows=d.rows;
+        var adv=curRows.filter(function(x){return x.pChange>0;}).length;
+        var dec=curRows.filter(function(x){return x.pChange<0;}).length;
+        msub.innerHTML=curRows.length+' companies · <span class="cu">'+adv+' up</span> · <span class="cd">'+dec+' down</span>'+((pct!==""&&pct!=null)?' · index '+signPct(parseFloat(pct)):'');
+        renderRows();
+      })
+      .catch(function(){
+        msub.textContent="";
+        mbody.innerHTML='<div class="merr">Couldn\'t reach the data engine — is the tool window still open?</div>';
+      });
+  }
+  function renderRows(){
+    var q=mfilter.value.trim().toLowerCase();
+    var rows=curRows.slice();
+    if(sortMode==="name") rows.sort(function(a,b){return a.company.localeCompare(b.company);});
+    else rows.sort(function(a,b){return b.pChange-a.pChange;});
+    if(q) rows=rows.filter(function(x){return x.company.toLowerCase().indexOf(q)>=0||x.symbol.toLowerCase().indexOf(q)>=0;});
+    if(!rows.length){ mbody.innerHTML='<div class="merr">No matches.</div>'; return; }
+    var h=[];
+    rows.forEach(function(x){
+      var up=x.pChange>=0;
+      h.push('<a class="crow" href="https://www.google.com/finance/quote/'+encodeURIComponent(x.symbol)+':NSE" target="_blank" rel="noopener">'
+        +'<span class="cname"><span class="sym">'+esc(x.symbol)+'</span><span class="co">'+esc(x.company)+'</span></span>'
+        +'<span class="cnum"><span class="ltp">'+(x.ltp!=null?num(x.ltp):"")+'</span><span class="cp '+(up?"cu":"cd")+'">'+signPct(x.pChange)+'</span></span></a>');
+    });
+    mbody.innerHTML=h.join("");
+  }
+  function closeModal(){ modal.hidden=true; document.body.style.overflow=""; }
+
+  $("#mclose").addEventListener("click", closeModal);
+  modal.addEventListener("click", function(e){ if(e.target===modal) closeModal(); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"&&!modal.hidden) closeModal(); });
+  mfilter.addEventListener("input", renderRows);
+  msort.addEventListener("click", function(){
+    sortMode = sortMode==="pct" ? "name" : "pct";
+    msort.textContent = sortMode==="pct" ? "Sort: % change" : "Sort: A–Z";
+    renderRows();
+  });
+
+  function cardFrom(e){ return e.target.closest(".clk"); }
+  $("#out").addEventListener("click", function(e){
+    if(e.target.closest(".chartlink")) return;        // let the chart link open
+    var c=cardFrom(e); if(!c) return;
+    e.preventDefault();
+    openModal(c.getAttribute("data-cindex"), c.getAttribute("data-name"), c.getAttribute("data-pct"));
+  });
+  $("#out").addEventListener("keydown", function(e){
+    if(e.key!=="Enter"&&e.key!==" ") return;
+    var c=cardFrom(e); if(!c) return;
+    e.preventDefault();
+    openModal(c.getAttribute("data-cindex"), c.getAttribute("data-name"), c.getAttribute("data-pct"));
+  });
 })();
 </script>
 </body>

@@ -103,6 +103,29 @@ NEWS_FEEDS = [
     ("Livemint",        "https://www.livemint.com/rss/markets"),
 ]
 
+# Which NSE index to query for a card's constituents (None = no member list)
+DISPLAY_TO_NSE = {
+    "Sensex": "SENSEX", "Nifty 50": "NIFTY 50", "Nifty Bank": "NIFTY BANK",
+    "Nifty Midcap 50": "NIFTY MIDCAP 50", "Nifty Midcap 100": "NIFTY MIDCAP 100",
+    "Nifty Smallcap 100": "NIFTY SMALLCAP 100", "Nifty Next 50": "NIFTY NEXT 50",
+    "India VIX": None,
+}
+SECTOR_LABEL_TO_NSE = {
+    "IT": "NIFTY IT", "Auto": "NIFTY AUTO", "Pharma": "NIFTY PHARMA",
+    "FMCG": "NIFTY FMCG", "Metal": "NIFTY METAL", "Realty": "NIFTY REALTY",
+    "Media": "NIFTY MEDIA", "PSU Bank": "NIFTY PSU BANK", "Pvt Bank": "NIFTY PRIVATE BANK",
+    "Fin Services": "NIFTY FINANCIAL SERVICES", "Energy": "NIFTY ENERGY",
+    "Infra": "NIFTY INFRASTRUCTURE", "Con. Durables": "NIFTY CONSUMER DURABLES",
+    "Healthcare": "NIFTY HEALTHCARE INDEX", "Oil & Gas": "NIFTY OIL & GAS",
+}
+# Sensex 30 (NSE symbols) — resolved against NIFTY 50 + NIFTY NEXT 50 data
+SENSEX_30 = {
+    "ADANIPORTS","ASIANPAINT","AXISBANK","BAJFINANCE","BAJAJFINSV","BHARTIARTL",
+    "HCLTECH","HDFCBANK","HINDUNILVR","ICICIBANK","INFY","ITC","KOTAKBANK","LT",
+    "M&M","MARUTI","NTPC","NESTLEIND","POWERGRID","RELIANCE","SBIN","SUNPHARMA",
+    "TCS","TATAMOTORS","TATASTEEL","TECHM","TITAN","TRENT","ULTRACEMCO","ZOMATO",
+}
+
 
 # -------------------------------------------------------------------- helpers
 def _isnan(x):
@@ -271,6 +294,49 @@ def _f(v):
         return float(v)
     except Exception:
         return None
+
+
+def nse_constituents(name):
+    """Member stocks of an NSE index (live snapshot), sorted by % change desc."""
+    from urllib.parse import quote
+    s = nse_session()
+
+    def fetch(idx):
+        url = "https://www.nseindia.com/api/equity-stockIndices?index=" + quote(idx)
+        return nse_get(s, url).get("data", [])
+
+    raw = []
+    if name == "SENSEX":
+        seen = set()
+        for idx in ("NIFTY 50", "NIFTY NEXT 50"):
+            try:
+                for r in fetch(idx):
+                    sym = r.get("symbol")
+                    if sym in SENSEX_30 and sym not in seen:
+                        seen.add(sym)
+                        raw.append(r)
+            except Exception:
+                continue
+    else:
+        raw = fetch(name)
+
+    rows = []
+    for r in raw:
+        sym = r.get("symbol")
+        if not sym or sym.upper() == name.upper():
+            continue
+        pch = _f(r.get("pChange"))
+        if pch is None:
+            continue
+        rows.append({
+            "symbol": sym,
+            "company": (r.get("meta") or {}).get("companyName") or sym,
+            "ltp": _f(r.get("lastPrice")),
+            "change": _f(r.get("change")),
+            "pChange": pch,
+        })
+    rows.sort(key=lambda x: x["pChange"], reverse=True)
+    return rows
 
 
 # --------------------------------------------------------------- News (RSS)
@@ -460,6 +526,12 @@ def build_brief(date_str):
     except Exception as e:
         notes.append(f"Movers: {e}")
 
+    # ---- tag each card with the NSE index to query for its members ----
+    for i in out.get("indices", []):
+        i["cindex"] = DISPLAY_TO_NSE.get(i.get("name"))
+    for sct in out.get("sectors", []):
+        sct["cindex"] = SECTOR_LABEL_TO_NSE.get(sct.get("name"))
+
     # ---- News (RSS, most recent) ----
     try:
         news = fetch_news(notes)
@@ -513,6 +585,21 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send(200, json.dumps({"error": str(e),
                                             "trace": traceback.format_exc(), "fatal": True}))
+            return
+
+        if parsed.path == "/api/constituents":
+            qs = parse_qs(parsed.query)
+            name = (qs.get("index", [""])[0]).strip()
+            if not name:
+                self._send(200, json.dumps({"error": "No index specified.", "rows": []}))
+                return
+            try:
+                rows = nse_constituents(name)
+                self._send(200, json.dumps({"index": name, "count": len(rows), "rows": rows}))
+            except Exception as e:
+                self._send(200, json.dumps({
+                    "index": name, "rows": [],
+                    "error": "Couldn't load members from NSE right now ({}).".format(e)}))
             return
 
         self._send(404, "Not found", "text/plain; charset=utf-8")
